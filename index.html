@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+/* ==========================================================================
+   1. DESIGN TOKENS — identidad Cuadrangular
+   PALETA ESTRICTA: #d1312a (rojo) · #2c3139 (gris) · #f7f4f4 (claro)
+   Cualquier variación es únicamente transparencia (alpha) de estos 3 tonos.
+   ========================================================================== */
+:root{
+  --rojo:        #d1312a;
+  --gris:        #2c3139;
+  --claro:       #f7f4f4;
+
+  --rojo-55:     rgba(209,49,42,.55);   /* estado "atención" */
+  --rojo-12:     rgba(209,49,42,.12);
+  --gris-70:     rgba(44,49,57,.7);     /* texto secundario */
+  --gris-45:     rgba(44,49,57,.45);    /* texto tenue */
+  --gris-15:     rgba(44,49,57,.15);    /* bordes */
+  --gris-08:     rgba(44,49,57,.08);    /* hover / heat suave */
+  --gris-04:     rgba(44,49,57,.04);    /* superficie de cards */
+  --claro-10:    rgba(247,244,244,.1);
+  --claro-15:    rgba(247,244,244,.15);
+  --claro-60:    rgba(247,244,244,.6);
+  --claro-40:    rgba(247,244,244,.4);
+
+  --font-display:'Montserrat',sans-serif;
+  --font-body:'Montserrat',-apple-system,'Segoe UI',sans-serif;
+  --radius: 2px; /* la marca es angular, casi sin curvas */
+  --sidebar-w: 268px;
+}
+
+*{box-sizing:border-box; margin:0; padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--claro);
+  color:var(--gris);
+  font-family:var(--font-body);
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+::selection{background:var(--rojo); color:var(--claro);}
+::-webkit-scrollbar{width:9px; height:9px;}
+::-webkit-scrollbar-track{background:var(--claro);}
+::-webkit-scrollbar-thumb{background:var(--gris-15);}
+::-webkit-scrollbar-thumb:hover{background:var(--rojo);}
+
+.chev{ /* firma visual de marca — motivo del isotipo */
+  display:inline-block; width:11px; height:11px; background:var(--rojo);
+  clip-path:polygon(0 0, 55% 0, 100% 50%, 55% 100%, 0 100%, 45% 50%);
+  flex:0 0 auto;
+}
+
+/* ==========================================================================
+   2. LAYOUT — sidebar fijo + contenido
+   ========================================================================== */
+.app{display:flex; min-height:100vh;}
+
+/* ---- SIDEBAR (bloque gris de marca) ---- */
+.sidebar{
+  width:var(--sidebar-w); flex:0 0 var(--sidebar-w);
+  background:var(--gris); border-right:3px solid var(--rojo);
+  position:fixed; top:0; left:0; bottom:0; z-index:100;
+  display:flex; flex-direction:column;
+  transition:transform .25s ease;
+  color:var(--claro);
+}
+.sidebar-brand{
+  padding:18px 20px; display:flex; align-items:center; gap:12px;
+  border-bottom:1px solid var(--claro-15);
+}
+.sidebar-brand .logo-chip{
+  background:transparent;
+  padding:0;
+  display:flex;
+  align-items:center;
+}
+
+.sidebar-brand .logo-chip img{
+  height:42px;
+  width:auto;
+  display:block;
+}
+.sidebar-brand .txt{line-height:1.1;}
+.sidebar-brand .txt .s{font-size:9px; color:var(--claro-60); letter-spacing:2px; text-transform:uppercase; font-weight:700;}
+
+.sidebar-status{
+  padding:14px 20px; border-bottom:1px solid var(--claro-15);
+  display:flex; align-items:center; gap:9px;
+}
+.sidebar-status .pulse{
+  width:9px; height:9px; background:var(--rojo);
+  clip-path:polygon(0 50%,50% 0,100% 50%,50% 100%);
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{
+  0%{opacity:1;} 50%{opacity:.35;} 100%{opacity:1;}
+}
+.sidebar-status .lbl{font-size:11px; color:var(--claro-60);}
+.sidebar-status .lbl b{color:var(--claro); display:block; font-size:12.5px; letter-spacing:.3px;}
+
+nav.sidebar-nav{flex:1; overflow-y:auto; padding:14px 10px;}
+.nav-item{
+  display:flex; align-items:center; gap:11px;
+  padding:10px 12px; margin-bottom:2px; cursor:pointer;
+  font-size:12.5px; font-weight:600; color:var(--claro-60);
+  border-left:3px solid transparent;
+  transition:background .15s, color .15s, border-color .15s;
+  user-select:none;
+}
+.nav-item .num{
+  font-family:var(--font-display); font-weight:900; font-size:10px; color:var(--claro-40);
+  width:16px; flex:0 0 16px;
+}
+.nav-item:hover{background:var(--claro-10); color:var(--claro);}
+.nav-item.active{
+  background:var(--claro-10); color:var(--claro); border-left-color:var(--rojo);
+}
+.nav-item.active .num{color:var(--rojo);}
+
+.sidebar-foot{
+  padding:16px 20px; border-top:1px solid var(--claro-15);
+  font-size:10px; color:var(--claro-40); line-height:1.6;
+}
+
+/* ---- MOBILE TOGGLE ---- */
+.mobile-bar{
+  display:none; position:fixed; top:0; left:0; right:0; height:56px; z-index:120;
+  background:var(--gris); border-bottom:3px solid var(--rojo);
+  align-items:center; justify-content:space-between; padding:0 16px;
+  color:var(--claro);
+}
+.mobile-bar .brand-mini{display:flex; align-items:center; gap:9px; font-family:var(--font-display); font-weight:900; font-size:13px; letter-spacing:1px;}
+.mobile-bar .brand-mini .logo-chip{background:var(--claro); padding:3px 6px; display:flex; align-items:center;}
+.mobile-bar .brand-mini img{height:20px; display:block;}
+.burger{width:26px; height:20px; position:relative; cursor:pointer;}
+.burger span{position:absolute; left:0; right:0; height:2px; background:var(--claro); transition:.2s;}
+.burger span:nth-child(1){top:0;} .burger span:nth-child(2){top:9px;} .burger span:nth-child(3){top:18px;}
+.sidebar-overlay{display:none; position:fixed; inset:0; background:rgba(44,49,57,.55); z-index:99;}
+
+/* ---- MAIN ---- */
+main.content{
+  margin-left:var(--sidebar-w); flex:1; min-width:0;
+  padding:34px 40px 80px;
+}
+.topbar{
+  display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px;
+  margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid var(--gris-15);
+}
+.topbar h1{font-family:var(--font-display); font-weight:900; font-size:22px; letter-spacing:.3px; text-transform:uppercase;}
+.topbar .period{font-size:12px; color:var(--gris-70); margin-top:7px;}
+.topbar .actions{display:flex; gap:10px; align-items:center;}
+.pill{
+  font-size:10.5px; font-weight:800; letter-spacing:1px; text-transform:uppercase;
+  padding:7px 13px; border:1px solid var(--gris-15); color:var(--gris-70);
+}
+.pill.live{border-color:var(--rojo); color:var(--rojo); display:flex; align-items:center; gap:7px;}
+.pill.live .dot{width:6px; height:6px; background:var(--rojo); clip-path:polygon(0 50%,50% 0,100% 50%,50% 100%); animation:pulse 2s infinite;}
+
+/* ==========================================================================
+   3. VISTAS (secciones) — control por JS
+   ========================================================================== */
+.view{display:none; animation:fadeIn .35s ease;}
+.view.active{display:block;}
+@keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+.section-head{
+  display:flex; align-items:center; gap:10px; margin:0 0 16px;
+}
+.section-head h2{font-size:14px; letter-spacing:2px; text-transform:uppercase; font-weight:800; color:var(--gris);}
+.section-head .hint{font-size:11.5px; color:var(--gris-45); margin-left:auto; font-weight:500;}
+.block{margin-bottom:38px;}
+
+/* ---- CARD BASE ---- */
+.card{
+  background:var(--gris-04); border:1px solid var(--gris-15);
+  padding:22px 24px; transition:border-color .2s;
+}
+.card:hover{border-color:var(--gris-45);}
+.grid{display:grid; gap:16px;}
+.grid-2{grid-template-columns:1fr 1fr;}
+.grid-3{grid-template-columns:repeat(3,1fr);}
+.grid-4{grid-template-columns:repeat(4,1fr);}
+@media(max-width:1080px){ .grid-3,.grid-4{grid-template-columns:1fr 1fr;} }
+@media(max-width:680px){ .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;} }
+
+.badge{font-size:10px; font-weight:800; letter-spacing:1px; padding:4px 10px; text-transform:uppercase; display:inline-block;}
+.badge.verde{background:var(--gris-08); color:var(--gris);}
+.badge.ambar{background:var(--rojo-12); color:var(--rojo-55);}
+.badge.rojo{background:var(--rojo-12); color:var(--rojo);}
+
+.status-dot{width:9px; height:9px; display:inline-block; clip-path:polygon(0 50%,50% 0,100% 50%,50% 100%);}
+.status-dot.verde{background:var(--gris);}
+.status-dot.ambar{background:var(--rojo-55);}
+.status-dot.rojo{background:var(--rojo);}
+
+/* ---- EXECUTIVE OVERVIEW ---- */
+.hero-score{
+  background:var(--gris-04);
+  border:1px solid var(--gris-15); border-top:3px solid var(--rojo); padding:30px 32px;
+  display:grid; grid-template-columns:220px 1fr; gap:32px; align-items:center;
+}
+@media(max-width:760px){ .hero-score{grid-template-columns:1fr;} }
+.hero-score .radar-wrap{position:relative; width:220px; height:220px; margin:0 auto;}
+.hero-score .score-num{
+  position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  pointer-events:none;
+}
+.hero-score .score-num b{font-family:var(--font-display); font-weight:900; font-size:34px; color:var(--gris);}
+.hero-score .score-num span{font-size:9.5px; color:var(--gris-70); letter-spacing:1.5px; text-transform:uppercase; margin-top:2px;}
+.hero-score .copy h3{font-family:var(--font-display); font-weight:900; font-size:17px; margin-bottom:10px; text-transform:uppercase;}
+.hero-score .copy p{font-size:13px; color:var(--gris-70); line-height:1.7; margin-bottom:8px;}
+.hero-score .copy p b{color:var(--gris);}
+
+.mini-kpi-row{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:18px;}
+@media(max-width:680px){ .mini-kpi-row{grid-template-columns:1fr;} }
+.mini-kpi{
+  background:var(--gris-04); border:1px solid var(--gris-15); border-left:3px solid var(--gris-15);
+  padding:16px 18px;
+}
+.mini-kpi.verde{border-left-color:var(--gris);}
+.mini-kpi.ambar{border-left-color:var(--rojo);}
+.mini-kpi .lbl{font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--gris-70); font-weight:700;}
+.mini-kpi .val{font-family:var(--font-display); font-weight:900; font-size:28px; margin-top:8px;}
+.mini-kpi.verde .val{color:var(--gris);} .mini-kpi.ambar .val{color:var(--rojo);}
+.mini-kpi .meta{font-size:10.5px; color:var(--gris-45); margin-top:5px;}
+
+.brief-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:18px;}
+@media(max-width:900px){ .brief-grid{grid-template-columns:1fr;} }
+.brief-card{background:var(--gris-04); border:1px solid var(--gris-15); padding:16px 18px;}
+.brief-card .k{font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--rojo); font-weight:800; margin-bottom:8px; display:flex; gap:7px; align-items:center;}
+.brief-card p{font-size:12.5px; color:var(--gris-70); line-height:1.65;}
+
+/* ---- SEMAFORO GLOBAL ---- */
+.sem-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px;}
+@media(max-width:940px){ .sem-grid{grid-template-columns:1fr 1fr;} }
+.sem-card{
+  background:var(--gris-04); border:1px solid var(--gris-15); padding:20px; text-align:center;
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%);
+}
+.sem-card canvas{max-width:130px; margin:0 auto;}
+.sem-card .lbl{font-size:11px; letter-spacing:.5px; color:var(--gris-70); font-weight:700; margin-top:10px;}
+.sem-card .meta{font-size:10.5px; color:var(--gris-45); margin-top:4px;}
+.sem-card.veredicto{
+  background:var(--gris); color:var(--claro); display:flex; flex-direction:column; justify-content:center;
+}
+.sem-card.veredicto .lbl{color:var(--claro-60);}
+.sem-card.veredicto .estado{font-family:var(--font-display); font-weight:900; font-size:17px; margin:10px 0 8px; display:flex; align-items:center; justify-content:center; gap:8px;}
+.sem-card.veredicto.ambar .estado{color:var(--rojo);}
+.sem-card.veredicto .regla{font-size:10.5px; color:var(--claro-60); line-height:1.6;}
+
+/* ---- KPI CRÍTICOS ---- */
+.kpi-detail{padding:24px 26px;}
+.kpi-detail-head{display:flex; justify-content:space-between; align-items:flex-start; gap:14px; flex-wrap:wrap; margin-bottom:14px;}
+.kpi-detail-head h3{font-size:15px; font-weight:800;}
+.bar-compare-wrap{background:var(--gris-04); border:1px solid var(--gris-15); padding:22px 26px; margin-bottom:16px;}
+.answer-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:0; margin-top:16px; border-top:1px solid var(--gris-15);}
+@media(max-width:900px){ .answer-grid{grid-template-columns:1fr;} }
+.answer-cell{padding:14px 16px; border-right:1px solid var(--gris-15); border-bottom:1px solid var(--gris-15);}
+.answer-cell:last-child{border-right:none;}
+.answer-cell .q{font-size:9.5px; letter-spacing:1px; text-transform:uppercase; color:var(--rojo); font-weight:800; margin-bottom:6px;}
+.answer-cell .a{font-size:12px; color:var(--gris-70); line-height:1.6;}
+
+/* ---- SALUD POR CÉLULA (heatmap) ---- */
+.heatmap{display:grid; grid-template-columns:180px repeat(3,1fr); gap:1px; background:var(--gris-15); border:1px solid var(--gris-15);}
+.heatmap .hcell{background:var(--claro); padding:13px 14px; font-size:11.5px; display:flex; align-items:center;}
+.heatmap .hcell.head{background:var(--gris); font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--claro-60); font-weight:700;}
+.heatmap .hcell.rowlbl{font-weight:700; font-size:12px;}
+.heatmap .hcell.val{justify-content:center; font-family:var(--font-display); font-weight:900; font-size:14px;}
+.heatmap .val.g1{background:var(--gris-08); color:var(--gris);}
+.heatmap .val.g2{background:var(--rojo-12); color:var(--rojo-55);}
+.heatmap .val.g3{background:var(--rojo-12); color:var(--rojo);}
+
+/* ---- RIESGOS / MATRIZ ---- */
+.risk-card{padding:16px 18px; border-left:3px solid var(--gris-15); margin-bottom:12px;}
+.risk-card.mitigado{border-left-color:var(--gris);}
+.risk-card.contencion{border-left-color:var(--rojo);}
+.risk-card .rh{display:flex; justify-content:space-between; gap:10px; align-items:flex-start;}
+.risk-card .rh b{font-size:13px;}
+.risk-card p{font-size:12px; color:var(--gris-70); margin-top:6px; line-height:1.6;}
+
+/* ---- TIMELINE ---- */
+.timeline{position:relative; padding-left:26px;}
+.timeline::before{content:''; position:absolute; left:5px; top:4px; bottom:4px; width:2px; background:var(--gris-15);}
+.t-item{position:relative; padding-bottom:22px;}
+.t-item::before{content:''; position:absolute; left:-26px; top:2px; width:11px; height:11px; background:var(--rojo); clip-path:polygon(0 0,55% 0,100% 50%,55% 100%,0 100%,45% 50%);}
+.t-item .day{font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--rojo); font-weight:800;}
+.t-item .txt{font-size:13px; margin-top:5px; line-height:1.55;}
+.t-item .who{font-size:11px; color:var(--gris-45); margin-top:4px;}
+
+/* ---- GOBERNANZA TABLE ---- */
+table.gob{width:100%; border-collapse:collapse; font-size:12.5px;}
+table.gob th{text-align:left; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--gris-70); padding:10px 12px; border-bottom:1px solid var(--gris-15);}
+table.gob td{padding:12px; border-bottom:1px solid var(--gris-15); color:var(--gris-70); vertical-align:top;}
+table.gob td.area{color:var(--gris); font-weight:700;}
+table.gob tr:hover td{background:var(--gris-08);}
+
+/* ---- SIGUIENTES PASOS ---- */
+.step-row{display:flex; gap:14px; align-items:flex-start; padding:16px 18px; border-bottom:1px solid var(--gris-15);}
+.step-row:last-child{border-bottom:none;}
+.step-box{width:16px; height:16px; border:2px solid var(--gris-45); flex:0 0 16px; margin-top:2px; transition:.2s; cursor:pointer;}
+.step-box.done{background:var(--rojo); border-color:var(--rojo); position:relative;}
+.step-row b{font-size:13px;}
+.step-row .meta{font-size:11px; color:var(--gris-45); margin-top:4px;}
+
+/* ---- ACCOUNTABILITY ---- */
+.acc-cols{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+@media(max-width:800px){ .acc-cols{grid-template-columns:1fr;} }
+.acc-list{list-style:none;}
+.acc-list li{padding:10px 0 10px 22px; position:relative; font-size:12.5px; color:var(--gris-70); line-height:1.6; border-bottom:1px solid var(--gris-15);}
+.acc-list li:last-child{border-bottom:none;}
+.acc-list li::before{content:''; position:absolute; left:0; top:16px; width:8px; height:8px;}
+.acc-list.si li::before{background:var(--rojo);}
+.acc-list.no li::before{background:var(--gris-45);}
+.signoff{margin-top:22px; padding-top:18px; border-top:1px dashed var(--gris-15); display:flex; justify-content:space-between; flex-wrap:wrap; gap:16px; font-size:11.5px; color:var(--gris-45);}
+.signoff div b{display:block; color:var(--gris); font-size:13px; margin-bottom:4px;}
+
+/* utilidad */
+.muted{color:var(--gris-70);}
+.small{font-size:11.5px;}
+canvas{max-width:100%;}
+.chart-off{font-size:11px; color:var(--gris-45); text-align:center; padding:20px 10px; border:1px dashed var(--gris-15);}
+</style>
+</head>
+<body>
+
+<!-- ============ MOBILE TOPBAR ============ -->
+<div class="mobile-bar">
+  <div class="brand-mini"><span class="logo-chip"><img class="brand-logo" src="./logo.png" alt="Cuadrangular">alt="Cuadrangular"></span>CUADRANGULAR</div>
+  <div class="burger" id="burgerBtn"><span></span><span></span><span></span></div>
+</div>
+<div class="sidebar-overlay" id="overlay"></div>
+
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="logo-chip"><img class="brand-logo" src="./logo.png" alt="Cuadrangular"></span>
+      <div class="txt">
+        <div class="s">.</div>
+      </div>
+    </div>
+    <div class="sidebar-status">
+      <span class="pulse"></span>
+      <span class="lbl">Veredicto de la semana<b>En observación</b></span>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav">
+      <div class="nav-item" data-view="overview"><span class="num">01</span>Executive Overview</div>
+      <div class="nav-item" data-view="semaforo"><span class="num">02</span>Semáforo Global</div>
+      <div class="nav-item" data-view="kpis"><span class="num">03</span>KPIs Críticos</div>
+      <div class="nav-item" data-view="celulas"><span class="num">04</span>Salud por Célula</div>
+      <div class="nav-item" data-view="riesgos"><span class="num">05</span>Riesgos Mitigados</div>
+      <div class="nav-item" data-view="decisiones"><span class="num">06</span>Decisiones Detonadas</div>
+      <div class="nav-item" data-view="gobernanza"><span class="num">07</span>Gobernanza Interárea</div>
+      <div class="nav-item" data-view="pasos"><span class="num">08</span>Próximos Pasos</div>
+      <div class="nav-item" data-view="accountability"><span class="num">09</span>Accountability CEO</div>
+    </nav>
+    <div class="sidebar-foot">
+      Dirección General de Operaciones Digitales<br>
+      cuadrangular.mx · Uso interno, Alta Dirección
+    </div>
+  </aside>
+
+  <!-- ============ CONTENIDO ============ -->
+  <main class="content">
+
+    <div class="topbar">
+      <div>
+        <h1 id="pageTitle">Executive Overview</h1>
+        <div class="period">Reporte Semanal C-Suite · Semana del 04 al 10 de Mayo, 2026</div>
+      </div>
+      <div class="actions">
+        <span class="pill live"><span class="dot"></span>Datos vivos de la semana</span>
+        <span class="pill">Confidencial · Mesa Directiva</span>
+      </div>
+    </div>
+
+    <!-- ================= 01 · EXECUTIVE OVERVIEW ================= -->
+    <section class="view active" id="view-overview">
+      <div class="block">
+        <div class="hero-score">
+          <div class="radar-wrap">
+            <canvas id="chartMadurez"></canvas>
+            <div class="score-num"><b id="scoreNum">82</b><span>Score madurez /100</span></div>
+          </div>
+          <div class="copy">
+            <h3>Lectura ejecutiva de la semana</h3>
+            <p><b>Qué pasó:</b> se contuvo una crisis de cliente crítico con protocolo de emergencia sin romper calidad ni presupuesto; 2 alertas de burnout fueron identificadas y aisladas a tiempo.</p>
+            <p><b>Qué significa:</b> la operación sostiene estándar en 2 de 3 métricas nativas; la agenda por célula quedó 4 puntos abajo de meta — señal de sobrecarga estructural, no de un evento aislado.</p>
+            <p><b>Qué necesita saber el CEO:</b> la firma puede absorber las 2 cuentas nuevas <b>solo bajo el modelo condicionado</b> presentado en Gobernanza — no hay margen de absorción libre hoy.</p>
+          </div>
+        </div>
+
+        <div class="mini-kpi-row">
+          <div class="mini-kpi ambar">
+            <div class="lbl">Cumplimiento de agenda</div>
+            <div class="val">91%</div>
+            <div class="meta">Meta &gt;95% · por célula</div>
+          </div>
+          <div class="mini-kpi verde">
+            <div class="lbl">Incumplimiento prevenido</div>
+            <div class="val">88%</div>
+            <div class="meta">Meta &gt;85% · post-crisis</div>
+          </div>
+          <div class="mini-kpi verde">
+            <div class="lbl">Resolución de conflictos</div>
+            <div class="val">94%</div>
+            <div class="meta">Meta &gt;90% · sin escalar a CEO</div>
+          </div>
+        </div>
+
+        <div class="brief-grid">
+          <div class="brief-card"><div class="k"><span class="chev"></span>Decisión que detona</div><p>Revisión de causa raíz de agenda por célula en 48h + diferimiento condicionado de onboarding de cuentas nuevas hasta cerrar ampliación de plantilla puente.</p></div>
+          <div class="brief-card"><div class="k"><span class="chev"></span>Responsable</div><p>Dirección General de Operaciones, en conjunto con Capital Humano (carga) y Finanzas (fee de contingencia institucional).</p></div>
+          <div class="brief-card"><div class="k"><span class="chev"></span>No debe escalarse</div><p>El 94% de conflictos interárea se resolvió en este nivel. Cero temas de fricción Consultoría–Finanzas–Contraloría requieren tiempo del CEO esta semana.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 02 · SEMÁFORO GLOBAL ================= -->
+    <section class="view" id="view-semaforo">
+      <div class="section-head"><span class="chev"></span><h2>Estado del semáforo global</h2><span class="hint">Un solo indicador debajo de meta mueve el veredicto — sin promedios que lo disfracen</span></div>
+      <div class="sem-grid">
+        <div class="sem-card">
+          <canvas id="gaugeAgenda"></canvas>
+          <div class="lbl">Cumplimiento de agenda</div>
+          <div class="meta">Meta &gt;95%</div>
+        </div>
+        <div class="sem-card">
+          <canvas id="gaugePrevenido"></canvas>
+          <div class="lbl">Incumplimiento prevenido</div>
+          <div class="meta">Meta &gt;85%</div>
+        </div>
+        <div class="sem-card">
+          <canvas id="gaugeConflictos"></canvas>
+          <div class="lbl">Resolución de conflictos</div>
+          <div class="meta">Meta &gt;90%</div>
+        </div>
+        <div class="sem-card veredicto ambar">
+          <div class="lbl">Veredicto global</div>
+          <div class="estado"><span class="chev"></span>EN OBSERVACIÓN</div>
+          <div class="regla">1 de 3 indicadores por debajo de su meta institucional. Se activa revisión de causa raíz, no escalamiento de crisis.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 03 · KPIs CRÍTICOS ================= -->
+    <section class="view" id="view-kpis">
+      <div class="section-head"><span class="chev"></span><h2>KPIs críticos — resultado vs. meta</h2></div>
+
+      <div class="bar-compare-wrap block">
+        <canvas id="chartComparativo" height="90"></canvas>
+      </div>
+
+      <div id="kpiDetailWrap"></div>
+    </section>
+
+    <!-- ================= 04 · SALUD POR CÉLULA ================= -->
+    <section class="view" id="view-celulas">
+      <div class="section-head"><span class="chev"></span><h2>Salud operativa por célula</h2></div>
+
+      <div class="card block">
+        <div class="small muted" style="margin-bottom:12px; text-transform:uppercase; letter-spacing:1px; font-weight:700;">Heatmap — cumplimiento / carga / riesgo de burnout</div>
+        <div class="heatmap" id="heatmapWrap"></div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="small muted" style="margin-bottom:10px; text-transform:uppercase; letter-spacing:1px; font-weight:700;">Carga operativa por célula (% de capacidad)</div>
+          <canvas id="chartCarga"></canvas>
+        </div>
+        <div class="card" style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
+          <div class="small muted" style="margin-bottom:10px; text-transform:uppercase; letter-spacing:1px; font-weight:700; align-self:flex-start;">Indicador de burnout / capacidad global</div>
+          <canvas id="gaugeBurnout" style="max-width:200px;"></canvas>
+          <div class="small muted" style="margin-top:10px; text-align:center;">2 alertas críticas activas · 125% capacidad promedio en células con foco rojo</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 05 · RIESGOS MITIGADOS ================= -->
+    <section class="view" id="view-riesgos">
+      <div class="section-head"><span class="chev"></span><h2>Riesgos mitigados y matriz de exposición</h2></div>
+      <div class="grid grid-2">
+        <div class="card" id="riskListWrap"></div>
+        <div class="card">
+          <div class="small muted" style="margin-bottom:10px; text-transform:uppercase; letter-spacing:1px; font-weight:700;">Matriz probabilidad / impacto</div>
+          <canvas id="chartRiesgo"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 06 · DECISIONES DETONADAS ================= -->
+    <section class="view" id="view-decisiones">
+      <div class="section-head"><span class="chev"></span><h2>Timeline de decisiones de la semana</h2></div>
+      <div class="card">
+        <div class="timeline" id="timelineWrap"></div>
+      </div>
+    </section>
+
+    <!-- ================= 07 · GOBERNANZA INTERÁREA ================= -->
+    <section class="view" id="view-gobernanza">
+      <div class="section-head"><span class="chev"></span><h2>Gobernanza interárea — mesa directiva</h2></div>
+      <div class="card">
+        <table class="gob">
+          <thead><tr><th>Área</th><th>Último contacto</th><th>Próximo sync</th><th>Pendiente abierto</th><th>Estado</th></tr></thead>
+          <tbody id="gobTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= 08 · PRÓXIMOS PASOS ================= -->
+    <section class="view" id="view-pasos">
+      <div class="section-head"><span class="chev"></span><h2>Próximos pasos operativos</h2><span class="hint">Clic en la casilla para marcar avance (sesión local)</span></div>
+      <div class="card" id="stepsWrap"></div>
+    </section>
+
+    <!-- ================= 09 · ACCOUNTABILITY CEO ================= -->
+    <section class="view" id="view-accountability">
+      <div class="section-head"><span class="chev"></span><h2>Accountability — resumen para el CEO</h2></div>
+      <div class="card">
+        <div class="acc-cols">
+          <div>
+            <div class="small" style="text-transform:uppercase; letter-spacing:1px; font-weight:800; color:var(--rojo); margin-bottom:6px;">Qué necesita saber</div>
+            <ul class="acc-list si" id="accSiWrap"></ul>
+          </div>
+          <div>
+            <div class="small" style="text-transform:uppercase; letter-spacing:1px; font-weight:800; color:var(--gris-45); margin-bottom:6px;">Qué no debe escalarse</div>
+            <ul class="acc-list no" id="accNoWrap"></ul>
+          </div>
+        </div>
+        <div class="signoff">
+          <div><b>Dirección General de Operaciones Digitales</b>Reporte generado y validado previo a junta directiva semanal.</div>
+          <div><b>Próxima junta</b>Viernes, previo cierre de semana — con datos actualizados de Monday.com y tracker de capacidad.</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+/* ==========================================================================
+   DATA — fuente única de verdad. Edita aquí para actualizar todo el dashboard.
+   ========================================================================== */
+const DATA = {
+  kpis: [
+    { id:'agenda', nombre:'Cumplimiento de Agenda Operativa por Célula', valor:91, meta:95, estado:'ambar',
+      formula:'Entregables completados en fecha por célula / Total entregables programados por célula. Fuente: Monday.com.',
+      quePaso:'3 de 5 células cerraron la semana debajo del 95% por la reasignación de recursos al bomberazo del fin de semana.',
+      queSignifica:'La agenda ordinaria absorbió el costo de la emergencia — el problema no fue capacidad total, fue prioridad mal distribuida.',
+      decision:'Revisión de causa raíz con cada líder de célula en 48h. Ajuste de roster para la próxima activación de emergencia.',
+      responsable:'Dirección de Operaciones + Líderes de célula',
+      noEscalar:'No requiere intervención del CEO — es corrección operativa de nivel medio.' },
+    { id:'prevenido', nombre:'Tasa de Incumplimiento Prevenido', valor:88, meta:85, estado:'verde',
+      formula:'Riesgos de incumplimiento detectados y contenidos antes de impactar al cliente / Total riesgos detectados en el periodo.',
+      quePaso:'El protocolo de doble validación (Operaciones + Contraloría) contuvo 88% de los riesgos detectados durante la crisis.',
+      queSignifica:'El esquema de emergencia diseñado esta semana funcionó por encima de la meta institucional en su primera activación real.',
+      decision:'Se mantiene el protocolo sin ajustes. Se documenta como caso de referencia para la próxima emergencia.',
+      responsable:'Dirección de Operaciones + Contraloría',
+      noEscalar:'Resultado por encima de meta — se reporta como logro, no como pendiente.' },
+    { id:'conflictos', nombre:'Índice de Resolución de Conflictos Operativos', valor:94, meta:90, estado:'verde',
+      formula:'Conflictos interárea resueltos por Dirección de Operaciones / Total conflictos interárea registrados, sin escalar al CEO.',
+      quePaso:'6 de 6 conflictos interárea de la semana (Consultoría–Finanzas–Contraloría) se resolvieron en la mesa de Operaciones.',
+      queSignifica:'La gobernanza diseñada en el protocolo de pares está funcionando — la fricción no está llegando al CEO.',
+      decision:'Sin acción correctiva. Se usa como evidencia de madurez de gobernanza en la conversación de nuevas cuentas.',
+      responsable:'Dirección de Operaciones',
+      noEscalar:'Por definición, este indicador mide justamente lo que NO debe llegar al CEO — y no llegó.' }
+  ],
+
+  madurez: { score:82, ejes:['Procesos','Financiero','Calidad','Personas','Gobernanza'], valores:[88,80,90,66,90] },
+
+  celulas: [
+    { nombre:'Análisis e Inteligencia',   cumplimiento:89, carga:118, burnout:'alto'  },
+    { nombre:'Marketing y Contenido',     cumplimiento:93, carga:122, burnout:'alto'  },
+    { nombre:'Pauta y Trafficker',        cumplimiento:96, carga:104, burnout:'medio' },
+    { nombre:'Consultores Políticos',     cumplimiento:90, carga:111, burnout:'bajo'  },
+    { nombre:'Procesos',                  cumplimiento:97, carga:95,  burnout:'bajo'  }
+  ],
+
+  riesgos: [
+    { nombre:'Costo de horas extra — bomberazo de fin de semana', prob:2, impacto:4, estado:'mitigado',
+      detalle:'Contenido con esquema de célula espejo + tope de fondo de contingencia. Sin impacto al margen proyectado.' },
+    { nombre:'2 alertas críticas de burnout', prob:4, impacto:5, estado:'contencion',
+      detalle:'Excluidas del roster de emergencia. 1:1 con Capital Humano completado; seguimiento en 30-60 días.' },
+    { nombre:'Desviación de protocolo detectada por Contraloría', prob:1, impacto:3, estado:'mitigado',
+      detalle:'Checklist QA reforzado en Monday.com. 0 desviaciones registradas desde su implementación.' }
+  ],
+
+  decisiones: [
+    { dia:'Lunes',    texto:'Activación de protocolo de doble validación para contener al cliente crítico (bomberazo).', who:'Operaciones + Contraloría' },
+    { dia:'Martes',   texto:'Exclusión formal de los 2 casos de burnout del roster de emergencia y de cualquier extensión de jornada.', who:'Operaciones + Capital Humano' },
+    { dia:'Miércoles',texto:'Apertura de auditoría interna solicitada por Contraloría sobre desviaciones de protocolo.', who:'Contraloría' },
+    { dia:'Jueves',   texto:'Definición de fee de contingencia institucional como condición para onboarding de cuentas nuevas.', who:'Finanzas + Dirección de Operaciones' },
+    { dia:'Viernes',  texto:'Agenda de revisión de carga por célula previa a la junta directiva semanal.', who:'Capital Humano + Operaciones' }
+  ],
+
+  gobernanza: [
+    { area:'CEO', ultimo:'Diagnóstico de viabilidad de cuentas nuevas', proximo:'Junta directiva — viernes', pendiente:'Confirmar ventana de arranque escalonado', estado:'verde' },
+    { area:'Finanzas', ultimo:'Aprobación de tope de fondo de contingencia', proximo:'Revisión de margen post-bomberazo', pendiente:'Fee de contingencia institucional para cuentas nuevas', estado:'ambar' },
+    { area:'Contraloría', ultimo:'Reporte de desviaciones de protocolo', proximo:'Cierre de auditoría interna (48h)', pendiente:'Validación de checklist QA reforzado', estado:'ambar' },
+    { area:'Consultores Políticos', ultimo:'Solicitud de contraataque digital de emergencia', proximo:'Debrief de cierre de campaña crítica', pendiente:'Ninguno — protocolo ejecutado con éxito', estado:'verde' },
+    { area:'Capital Humano', ultimo:'1:1 con 2 casos de alerta de burnout', proximo:'Revisión de carga por célula — viernes AM', pendiente:'Rediseño de rol de líder de célula', estado:'ambar' }
+  ],
+
+  pasos: [
+    { accion:'Cierre de auditoría interna de Contraloría', dueno:'Contralor General', plazo:'48h' },
+    { accion:'Confirmar condiciones de onboarding — cuentas nuevas', dueno:'Finanzas + Dirección de Operaciones', plazo:'Viernes' },
+    { accion:'Revisión de carga por célula (pre-junta directiva)', dueno:'Capital Humano + Operaciones', plazo:'Viernes AM' }
+  ],
+
+  accountabilitySi: [
+    'La operación puede absorber las 2 cuentas nuevas solo bajo el modelo condicionado (plantilla puente + fee de contingencia + arranque escalonado).',
+    'El protocolo de doble validación funcionó por encima de meta en su primera activación real — 88% de incumplimiento prevenido.',
+    '2 células (Análisis y Contenido) están en zona roja de carga (&gt;115%) y requieren decisión de redistribución de cartera esta semana.',
+    'Cero conflictos interárea llegaron al nivel del CEO — la gobernanza de pares está sosteniendo la fricción donde debe sostenerse.'
+  ],
+  accountabilityNo: [
+    'La desviación de protocolo detectada por Contraloría — ya en auditoría interna con checklist reforzado.',
+    'Las 2 alertas de burnout — contenidas, con seguimiento activo de Capital Humano.',
+    'El costo de horas extra del bomberazo — absorbido dentro del fondo de contingencia, sin impacto a margen.',
+    'La agenda operativa 4 puntos abajo de meta — corrección de nivel medio, con causa raíz identificada.'
+  ]
+};
+
+/* ==========================================================================
+   LOGO — se usa el logotipo oficial de cuadrangular.mx.
+   Si no hay conexión, cae automáticamente al respaldo embebido.
+   ========================================================================== */
+const LOGO_FALLBACK = 'data:image/png;base64,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';
+document.querySelectorAll('img.brand-logo').forEach(img=>{
+  img.addEventListener('error', ()=>{ if(img.src !== LOGO_FALLBACK) img.src = LOGO_FALLBACK; });
+});
+
+/* ==========================================================================
+   NAVEGACIÓN — se conecta PRIMERO y de forma independiente de Chart.js.
+   Así el menú lateral funciona aunque las gráficas fallen o el CDN no cargue.
+   ========================================================================== */
+const titles = {
+  overview:'Executive Overview', semaforo:'Semáforo Global', kpis:'KPIs Críticos',
+  celulas:'Salud por Célula', riesgos:'Riesgos Mitigados', decisiones:'Decisiones Detonadas',
+  gobernanza:'Gobernanza Interárea', pasos:'Próximos Pasos', accountability:'Accountability CEO'
+};
+const initialized = {};
+
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('overlay');
+
+function openMobileSidebar(){ sidebar.style.transform='translateX(0)'; overlay.style.display='block'; }
+function closeMobileSidebar(){ if(window.innerWidth<=880){ sidebar.style.transform='translateX(-100%)'; overlay.style.display='none'; } }
+
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const target = document.getElementById('view-'+name);
+  if(target) target.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.view===name));
+  const pt = document.getElementById('pageTitle');
+  if(pt && titles[name]) pt.textContent = titles[name];
+  /* Las gráficas se inicializan de forma protegida: si algo falla,
+     la navegación sigue funcionando. */
+  if(!initialized[name]){
+    initialized[name] = true;
+    try{ if(initFns[name]) initFns[name](); }
+    catch(err){ console.warn('Vista "'+name+'": gráfica no disponible —', err.message); }
+  }
+  closeMobileSidebar();
+  try{ window.scrollTo({top:0, behavior:'smooth'}); }catch(e){ window.scrollTo(0,0); }
+}
+
+document.querySelectorAll('.nav-item').forEach(item=>{
+  item.addEventListener('click', ()=> showView(item.dataset.view));
+});
+document.querySelector('.nav-item[data-view="overview"]').classList.add('active');
+
+/* ---- mobile sidebar ---- */
+document.getElementById('burgerBtn').addEventListener('click', ()=>{
+  const open = sidebar.style.transform === 'translateX(0px)';
+  open ? closeMobileSidebar() : openMobileSidebar();
+});
+overlay.addEventListener('click', closeMobileSidebar);
+function applyResponsive(){
+  if(window.innerWidth<=880){
+    document.querySelector('.mobile-bar').style.display='flex';
+    document.querySelector('main.content').style.marginLeft='0';
+    sidebar.style.transform='translateX(-100%)';
+    document.body.style.paddingTop='56px';
+  } else {
+    document.querySelector('.mobile-bar').style.display='none';
+    document.querySelector('main.content').style.marginLeft='var(--sidebar-w)';
+    sidebar.style.transform='translateX(0)';
+    overlay.style.display='none';
+    document.body.style.paddingTop='0';
+  }
+}
+window.addEventListener('resize', applyResponsive);
+applyResponsive();
+
+/* ==========================================================================
+   CHART.JS — configuración compartida (protegida si el CDN no carga)
+   Paleta: solo #d1312a, #2c3139, #f7f4f4 y sus transparencias.
+   ========================================================================== */
+const HAS_CHART = (typeof Chart !== 'undefined');
+
+const C_ROJO   = '#d1312a';
+const C_GRIS   = '#2c3139';
+const C_CLARO  = '#f7f4f4';
+const COLOR = {
+  ok:      C_GRIS,                    /* dentro de meta */
+  aten:    'rgba(209,49,42,.55)',     /* atención */
+  crit:    C_ROJO,                    /* crítico */
+  grid:    'rgba(44,49,57,.1)',
+  track:   'rgba(44,49,57,.12)',
+  text:    'rgba(44,49,57,.6)',
+  metaBar: 'rgba(44,49,57,.25)'
+};
+
+if(HAS_CHART){
+  Chart.defaults.font.family = "'Montserrat', sans-serif";
+  Chart.defaults.color = COLOR.text;
+  Chart.defaults.borderColor = COLOR.grid;
+  Chart.defaults.font.size = 11;
+}
+
+function chartOff(canvasId){
+  const cv = document.getElementById(canvasId);
+  if(cv){
+    const note = document.createElement('div');
+    note.className = 'chart-off';
+    note.textContent = 'Gráfica no disponible (sin conexión a la librería de gráficas). Los datos siguen visibles en las tablas y tarjetas.';
+    cv.replaceWith(note);
+  }
+}
+
+function estadoColor(v, meta){ return v >= meta ? COLOR.ok : (v >= meta - 8 ? COLOR.aten : COLOR.crit); }
+
+function gaugeChart(canvasId, valor, meta){
+  if(!HAS_CHART){ chartOff(canvasId); return; }
+  const color = estadoColor(valor, meta);
+  new Chart(document.getElementById(canvasId), {
+    type:'doughnut',
+    data:{ datasets:[{ data:[valor, 100-valor], backgroundColor:[color, COLOR.track], borderWidth:0, cutout:'78%' }] },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      circumference:270, rotation:225,
+      plugins:{ legend:{display:false}, tooltip:{enabled:false} },
+      animation:{ animateRotate:true, duration:900 }
+    },
+    plugins:[{
+      id:'centerText',
+      afterDraw(chart){
+        const {ctx, chartArea:{width,height,top,left}} = chart;
+        ctx.save();
+        ctx.font = "900 22px Montserrat, sans-serif";
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center'; ctx.textBaseline='middle';
+        ctx.fillText(valor+'%', left+width/2, top+height/2);
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+function buildMadurezRadar(){
+  if(!HAS_CHART){ chartOff('chartMadurez'); return; }
+  new Chart(document.getElementById('chartMadurez'), {
+    type:'radar',
+    data:{ labels:DATA.madurez.ejes, datasets:[{
+      data:DATA.madurez.valores, backgroundColor:'rgba(209,49,42,.15)',
+      borderColor:C_ROJO, pointBackgroundColor:C_ROJO, borderWidth:2
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{legend:{display:false}},
+      scales:{ r:{
+        min:0, max:100, ticks:{display:false, stepSize:25},
+        grid:{color:COLOR.grid}, angleLines:{color:COLOR.grid},
+        pointLabels:{font:{size:9.5}, color:COLOR.text}
+      }}
+    }
+  });
+}
+
+function buildComparativo(){
+  if(!HAS_CHART){ chartOff('chartComparativo'); return; }
+  new Chart(document.getElementById('chartComparativo'), {
+    type:'bar',
+    data:{
+      labels:DATA.kpis.map(k=>k.nombre.length>28 ? k.nombre.slice(0,26)+'…' : k.nombre),
+      datasets:[
+        { label:'Resultado', data:DATA.kpis.map(k=>k.valor), backgroundColor:DATA.kpis.map(k=>estadoColor(k.valor,k.meta)), borderRadius:2, barThickness:26 },
+        { label:'Meta', data:DATA.kpis.map(k=>k.meta), backgroundColor:COLOR.metaBar, borderRadius:2, barThickness:26 }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{boxWidth:10, font:{size:11}} } },
+      scales:{
+        y:{ beginAtZero:true, max:100, grid:{color:COLOR.grid}, ticks:{callback:v=>v+'%'} },
+        x:{ grid:{display:false} }
+      }
+    }
+  });
+}
+
+function buildCargaChart(){
+  if(!HAS_CHART){ chartOff('chartCarga'); return; }
+  new Chart(document.getElementById('chartCarga'), {
+    type:'bar',
+    data:{
+      labels:DATA.celulas.map(c=>c.nombre),
+      datasets:[{
+        data:DATA.celulas.map(c=>c.carga),
+        backgroundColor:DATA.celulas.map(c=> c.carga>=115?COLOR.crit : c.carga>=105?COLOR.aten : COLOR.ok),
+        borderRadius:2
+      }]
+    },
+    options:{
+      indexAxis:'y', responsive:true,
+      plugins:{ legend:{display:false},
+        tooltip:{ callbacks:{ label:ctx=>ctx.parsed.x+'% de capacidad' } } },
+      scales:{
+        x:{ beginAtZero:true, suggestedMax:130, grid:{color:COLOR.grid}, ticks:{callback:v=>v+'%'} },
+        y:{ grid:{display:false}, ticks:{font:{size:11}} }
+      }
+    }
+  });
+}
+
+function buildBurnoutGauge(){
+  const promedioCarga = Math.round(DATA.celulas.reduce((a,c)=>a+c.carga,0)/DATA.celulas.length);
+  gaugeChart('gaugeBurnout', Math.min(promedioCarga,100), 100);
+}
+
+function buildRiesgoMatriz(){
+  if(!HAS_CHART){ chartOff('chartRiesgo'); return; }
+  const colorEstado = { mitigado:COLOR.ok, contencion:COLOR.crit };
+  new Chart(document.getElementById('chartRiesgo'), {
+    type:'scatter',
+    data:{ datasets:[{
+      data:DATA.riesgos.map(r=>({x:r.prob, y:r.impacto})),
+      backgroundColor:DATA.riesgos.map(r=>colorEstado[r.estado]),
+      pointRadius:11, pointHoverRadius:13
+    }]},
+    options:{
+      responsive:true,
+      plugins:{ legend:{display:false},
+        tooltip:{ callbacks:{ label:ctx=> DATA.riesgos[ctx.dataIndex].nombre } } },
+      scales:{
+        x:{ min:0, max:5, title:{display:true, text:'Probabilidad', color:COLOR.text}, grid:{color:COLOR.grid} },
+        y:{ min:0, max:5, title:{display:true, text:'Impacto', color:COLOR.text}, grid:{color:COLOR.grid} }
+      }
+    }
+  });
+}
+
+/* ==========================================================================
+   RENDER — DOM dinámico a partir de DATA
+   ========================================================================== */
+function renderKpiDetail(){
+  const wrap = document.getElementById('kpiDetailWrap');
+  wrap.innerHTML = DATA.kpis.map(k => `
+    <div class="card kpi-detail block">
+      <div class="kpi-detail-head">
+        <h3>${k.nombre}</h3>
+        <span class="badge ${k.estado}">${k.valor}% · Meta &gt;${k.meta}%</span>
+      </div>
+      <div class="small muted" style="line-height:1.6;"><b style="color:var(--gris);">Cálculo:</b> ${k.formula}</div>
+      <div class="answer-grid">
+        <div class="answer-cell"><div class="q">Qué pasó</div><div class="a">${k.quePaso}</div></div>
+        <div class="answer-cell"><div class="q">Qué significa</div><div class="a">${k.queSignifica}</div></div>
+        <div class="answer-cell"><div class="q">Decisión que detona</div><div class="a">${k.decision}</div></div>
+        <div class="answer-cell"><div class="q">Responsable</div><div class="a">${k.responsable}</div></div>
+        <div class="answer-cell" style="grid-column:span 2;"><div class="q">Qué no debe escalarse</div><div class="a">${k.noEscalar}</div></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderHeatmap(){
+  const wrap = document.getElementById('heatmapWrap');
+  const cls = v => v>=95 ? 'g1' : v>=88 ? 'g2' : 'g3';
+  const clsCarga = v => v<105 ? 'g1' : v<115 ? 'g2' : 'g3';
+  const clsBurn = b => b==='bajo' ? 'g1' : b==='medio' ? 'g2' : 'g3';
+  let html = `<div class="hcell head">Célula</div><div class="hcell head">Cumplimiento</div><div class="hcell head">Carga</div><div class="hcell head">Riesgo burnout</div>`;
+  DATA.celulas.forEach(c=>{
+    html += `<div class="hcell rowlbl">${c.nombre}</div>`;
+    html += `<div class="hcell val ${cls(c.cumplimiento)}">${c.cumplimiento}%</div>`;
+    html += `<div class="hcell val ${clsCarga(c.carga)}">${c.carga}%</div>`;
+    html += `<div class="hcell val ${clsBurn(c.burnout)}">${c.burnout.toUpperCase()}</div>`;
+  });
+  wrap.innerHTML = html;
+}
+
+function renderRiesgos(){
+  const wrap = document.getElementById('riskListWrap');
+  const lbl = { mitigado:['Mitigado','verde'], contencion:['En contención','rojo'] };
+  wrap.innerHTML = DATA.riesgos.map(r=>`
+    <div class="risk-card ${r.estado}">
+      <div class="rh"><b>${r.nombre}</b><span class="badge ${lbl[r.estado][1]}">${lbl[r.estado][0]}</span></div>
+      <p>${r.detalle}</p>
+    </div>
+  `).join('');
+}
+
+function renderTimeline(){
+  document.getElementById('timelineWrap').innerHTML = DATA.decisiones.map(d=>`
+    <div class="t-item">
+      <div class="day">${d.dia}</div>
+      <div class="txt">${d.texto}</div>
+      <div class="who">Responsable: ${d.who}</div>
+    </div>
+  `).join('');
+}
+
+function renderGobernanza(){
+  const dot = e => `<span class="status-dot ${e}"></span>`;
+  document.getElementById('gobTableBody').innerHTML = DATA.gobernanza.map(g=>`
+    <tr>
+      <td class="area">${g.area}</td>
+      <td>${g.ultimo}</td>
+      <td>${g.proximo}</td>
+      <td>${g.pendiente}</td>
+      <td>${dot(g.estado)}</td>
+    </tr>
+  `).join('');
+}
+
+function renderPasos(){
+  document.getElementById('stepsWrap').innerHTML = DATA.pasos.map((p,i)=>`
+    <div class="step-row">
+      <div class="step-box" data-i="${i}"></div>
+      <div>
+        <b>${p.accion}</b>
+        <div class="meta">Dueño: ${p.dueno} · Plazo: ${p.plazo}</div>
+      </div>
+    </div>
+  `).join('');
+  document.querySelectorAll('.step-box').forEach(box=>{
+    box.addEventListener('click', ()=> box.classList.toggle('done'));
+  });
+}
+
+function renderAccountability(){
+  document.getElementById('accSiWrap').innerHTML = DATA.accountabilitySi.map(t=>`<li>${t}</li>`).join('');
+  document.getElementById('accNoWrap').innerHTML = DATA.accountabilityNo.map(t=>`<li>${t}</li>`).join('');
+}
+
+/* ==========================================================================
+   INIT por sección (perezoso) — cada función es independiente y protegida
+   ========================================================================== */
+const initFns = {
+  overview: ()=>{ buildMadurezRadar(); },
+  semaforo: ()=>{
+    gaugeChart('gaugeAgenda', DATA.kpis[0].valor, DATA.kpis[0].meta);
+    gaugeChart('gaugePrevenido', DATA.kpis[1].valor, DATA.kpis[1].meta);
+    gaugeChart('gaugeConflictos', DATA.kpis[2].valor, DATA.kpis[2].meta);
+  },
+  kpis: ()=>{ renderKpiDetail(); buildComparativo(); },
+  celulas: ()=>{ renderHeatmap(); buildCargaChart(); buildBurnoutGauge(); },
+  riesgos: ()=>{ renderRiesgos(); buildRiesgoMatriz(); },
+  decisiones: ()=>{ renderTimeline(); },
+  gobernanza: ()=>{ renderGobernanza(); },
+  pasos: ()=>{ renderPasos(); },
+  accountability: ()=>{ renderAccountability(); }
+};
+
+/* ---- init primera vista (protegido) ---- */
+initialized.overview = true;
+try{ initFns.overview(); }
+catch(err){ console.warn('Overview: gráfica no disponible —', err.message); }
+</script>
+</body>
+</html>
